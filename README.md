@@ -17,14 +17,19 @@ Useful URL params: `?view=audience|dj|cables|logo|top|side|front|audLow|right45`
 `&split=0.5`, `&light=studio|bright|club`, `&ui=0` (hide UI), `&t=2` (freeze animation time).
 
 ## Versions
-- **V1**: right-angle plugs in every used rear socket (MASTER 1 XLR L/R, MASTER 2 RCA L/R, BOOTH L/R, MIC 1, USB, DC IN).
-  Cables inside the slot's width drop straight through it; the others are turned sideways, lie along the rear frame tube
-  and turn down into the slot. Printed mounts: a 4 mm bridge plate under the controller's rear feet plus slim uprights
-  that are snapped automatically into the gaps between plugs, each with a seat, lip and backrest for the tablet.
-- **V2**: only BOOTH L/R, MIC 1, USB and DC IN. A printed shelf continues the controller's top surface back to the
-  table's rear edge, hides all cables (use "V2 shelf opacity" to x-ray it) and carries the tablets.
-- Both: 80 mm honeycomb LED strip across the full rear face, 240 × 240 × 50 mm black box below it with the
-  Open Music logo (fits a 220 mm square, 10 mm border), one rainbow wave running through both.
+- **V1**: a straight plug in every rear socket (MASTER 1 XLR L/R, MASTER 2 RCA L/R, CH1–CH4 RCA, BOOTH L/R, DMX,
+  both USB-C, MIC 2, DC IN), all black. Each sticks straight out, bends down onto the rear frame tube and converges
+  into the cable slot. MIC 1 carries an L-shaped wireless receiver dongle standing upright. Printed mounts: a 4 mm
+  bridge plate under the controller's rear feet plus slim uprights snapped into the gaps between plugs, each with a
+  seat, lip and backrest for the tablet. LED strip across the full table width on the rear edge band; the logo box
+  hangs directly under it, back face in the table edge plane.
+- **V2**: only BOOTH L/R, MIC 1 (dongle lying flat inside the shelf), USB and DC IN. A printed shelf 80 mm wider than the
+  controller on each side continues its top surface back to the table's rear edge, hides all cables (use "V2 shelf
+  opacity" to x-ray it) and carries the tablets. The LED strip sits near the top of the shelf's rear face; the logo
+  box hangs directly under the table's edge band, back face flush with it.
+- Both: 35 mm tall honeycomb LED strip (flat-topped cells: two full per column, partial ones above and below),
+  240 × 240 × 50 mm black box with the Open Music logo (fits a 220 mm square, 10 mm border), one rainbow wave
+  running through both.
 
 ## Compare
 Bottom bar: V1, V2, Overlay (blend slider), Split ⇆ / Split ⇅ with a draggable divider (arrow keys when focused),
@@ -37,7 +42,7 @@ a background colour per version (also tints the floor), swap sides. Key `C` cycl
 | `js/flx10.js` | DDJ-FLX10 model (self-scored 88/100), real rear port layout in `info.ports` |
 | `js/thor.js` | THOR DJS002 model (90/100), `opts.height` 675–925, 250 × 100 cable cutout |
 | `js/connectors.js` | XLR / TRS / RCA / USB-C / DC plugs incl. right-angle variants (87/100), cable routing |
-| `js/rig.js` | tablets, screens, V1 mounts, V2 shelf, cable routing on the table |
+| `js/rig.js` | tablets, screens, V1 mounts, V2 shelf, mic dongle, cable routing on the table |
 | `js/fx.js` | LED strip and logo box shaders |
 | `CONTRACT.md` | axes, units and module API |
 | `notes/*.md` | per-model fidelity passes and what still differs from reality |
@@ -49,9 +54,8 @@ a background colour per version (also tints the floor), swap sides. Key `C` cycl
   390 mm deep against the FLX10's 387. The controller clears the tubes on its feet, so it sits flush with the outer front
   edge with its front feet on the tube; a 4 mm plate under the rear feet keeps it level (that is the V1 mount plate).
 - That leaves 63 mm from the controller's rear face to the table edge, of which 33 mm is open cable slot.
-  Straight XLR/jack plugs (55–60 mm) would overhang the table, so right-angle plugs (Neutrik NC3FRX / NC3MRX / NP3RX
-  style) are assumed throughout.
-- The photos put the table's edge band at ~52 mm, not 80; the LED strip is 80 mm tall and hangs ~28 mm below it.
+  Straight XLR/jack plugs (55–60 mm) end within a few mm of the edge, so their cables bend down right at it.
+- The photos put the table's edge band at ~52 mm; the 35 mm strip fits inside its height.
 - The real THOR slot looks ~200 mm wide; the model uses the requested 250 × 100.
 - DC IN plug assumed 5.5 / 2.5 mm barrel (12 V 3 A adaptor); the inner diameter is unconfirmed.
 

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export const AIR = { w: 247.6, h: 178.5, t: 6.1, bezel: 8.5, r: 18 };
 export const MINI = { w: 195.4, h: 134.8, t: 6.3, bezel: 7.5, r: 16 };
 export const GAP = 10;
+export const SHELF_SIDE = 80;   // V2 shelf overhangs the controller's width by this much on each side
 
 const M = {
   alu: new THREE.MeshStandardMaterial({ color: 0x3a3b3f, roughness: 0.32, metalness: 0.85 }),
@@ -113,7 +114,7 @@ export function buildRig(ctx) {
 
   const cables = ctx.variant === 'v2'
     ? ctx.ports.filter((p) => ['booth_l', 'booth_r', 'mic1', 'usb1', 'dc_in'].includes(p.role))
-    : ctx.ports.filter((p) => p.role);
+    : ctx.ports.filter(pluggable);
   const cableGroup = new THREE.Group(); cableGroup.name = 'cables'; root.add(cableGroup);
   buildCables(cableGroup, cables, ctx);
 
@@ -143,9 +144,10 @@ export function buildRig(ctx) {
     const mat = ctx.shelfMaterial || M.shelf;
     // top surface flush with the controller's deck; a hollow printed shell (walls drawn as solid blocks here)
     const h = ctx.deckY + (ctx.lift || 0), z0 = rearZ - 0.8, z1 = ctx.tableRearInnerZ, z2 = ctx.tableRearOuterZ;
-    const body = box(ctx.flxW, h, z0 - z1, mat, 0, topY + h / 2, (z0 + z1) / 2, shelf);
+    const W = ctx.flxW + 2 * SHELF_SIDE;
+    const body = box(W, h, z0 - z1, mat, 0, topY + h / 2, (z0 + z1) / 2, shelf);
     const capH = h - ctx.rimH;
-    box(ctx.flxW, capH, z1 - z2 + 0.5, mat, 0, topY + ctx.rimH + capH / 2, (z1 + z2) / 2, shelf);   // over the rear frame tube
+    box(W, capH, z1 - z2 + 0.5, mat, 0, topY + ctx.rimH + capH / 2, (z1 + z2) / 2, shelf);   // over the rear frame tube
     // a shallow groove in the top that the tablets stand in, matching the lip line
     for (const tb of tablets) {
       const c = new THREE.Group(); c.position.set(tb.x, tb.y, lipZ); c.rotation.x = -t; shelf.add(c);
@@ -160,81 +162,96 @@ export function buildRig(ctx) {
 }
 
 // ---------------- cables ----------------
-const CABLE_COL = { xlr: 0x111111, trs: 0x161616, rca_l: 0xe8e8e2, rca_r: 0xb3141c, usb: 0x1d1d1d, dc: 0x101010 };
+// All cables and plug boots are black. Straight plugs only: each one sticks straight out of its socket, then the cable
+// bends down onto the rear frame tube and converges on the cable slot in the middle.
+const CABLE = 0x121214;
+const BLACK_METAL = new THREE.MeshStandardMaterial({ color: 0x1c1c1f, roughness: 0.3, metalness: 0.85 });
+const STRAIGHT = { xlr_male_out: 'xlr_female', xlr_trs_combo_in: 'xlr_male', trs_jack: 'trs_635', rca: 'rca', usb_c: 'usb_c', dc_in: 'dc_barrel', dmx_xlr: 'dmx_xlr' };
+export const pluggable = (p) => !!STRAIGHT[p.kind];
+
 function fallbackPlug(kind) {
   const g = new THREE.Group();
-  const r = { xlr_female_ra: 10, trs_635_ra: 7, rca_ra: 5, usb_c_ra: 4, dc_barrel_ra: 5 }[kind] || 6;
-  const mat = new THREE.MeshStandardMaterial({ color: 0x9fa3a8, roughness: 0.3, metalness: 0.9 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 22, 24), mat);
-  body.rotation.x = Math.PI / 2; body.position.z = 11; g.add(body);
-  const elbow = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r * 0.8, 24, 20), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.7 }));
-  elbow.position.set(0, -10, 22); g.add(elbow);
-  g.userData = { length: 22, drop: 22, radius: r * 0.45 };
+  const r = { xlr_female: 10, xlr_male: 10, dmx_xlr: 10, trs_635: 7, rca: 5, usb_c: 4, dc_barrel: 5 }[kind] || 6;
+  const len = { xlr_female: 60, xlr_male: 56, dmx_xlr: 60, trs_635: 60, rca: 36, usb_c: 31, dc_barrel: 34 }[kind] || 30;
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.6, len, 24), new THREE.MeshStandardMaterial({ color: CABLE, roughness: 0.7 }));
+  body.rotation.x = Math.PI / 2; body.position.z = len / 2; g.add(body);
+  g.userData = { length: len, radius: r * 0.35, exit: [0, 0, len], exitDir: [0, 0, 1] };
+  return g;
+}
+
+// Wireless mic receiver: an L-shaped dongle on the MIC 1 XLR input (male XLR barrel, then a body turned 90°).
+// dir: 'up' (stands up behind the controller) or 'in' (lies flat towards the centre, for inside the V2 shelf).
+function makeMicDongle(dir) {
+  const g = new THREE.Group();
+  const shell = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.55, metalness: 0.1 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x2a2b2e, roughness: 0.35, metalness: 0.8 });
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(9.6, 9.6, 20, 40), metal);
+  barrel.rotation.x = Math.PI / 2; barrel.position.z = 10; g.add(barrel);
+  const body = new THREE.Group(); body.position.z = 30; g.add(body);
+  const elbow = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 22, 40), shell);
+  elbow.rotation.x = Math.PI / 2; body.add(elbow);
+  // the receiver body runs along local +y from the elbow
+  const geo = new THREE.ExtrudeGeometry(roundedRect(24, 58, 7), { depth: 18, bevelEnabled: true, bevelThickness: 2, bevelSize: 2, bevelSegments: 3, curveSegments: 10 });
+  geo.translate(0, 29, -9);
+  const arm = new THREE.Mesh(geo, shell); body.add(arm);
+  const led = new THREE.Mesh(new THREE.CircleGeometry(1.4, 16), new THREE.MeshBasicMaterial({ color: 0x3cff6a }));
+  led.position.set(0, 46, -11.1); led.rotation.y = Math.PI; body.add(led);
+  const nub = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.6, 9, 16), shell); nub.position.set(6, 63, 0); body.add(nub);
+  if (dir === 'in') body.rotation.z = Math.PI / 2;   // plug frame is turned by Ry = PI, so this points to world +x
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
 
 function buildCables(group, ports, ctx) {
-  const { topY, rearZ, cutout } = ctx;
+  const { topY, cutout } = ctx;
   const lib = ctx.plugs;
   const holeHalf = cutout.w / 2 - 8;
   const holeRear = cutout.z - cutout.d / 2;
-  // Cables from ports outside the slot's width lie on top of the rear frame tube, then turn forward into the slot.
   const tubeTopY = topY + (ctx.rimH || 0);
-  const laneZ = (i) => ctx.tableRearInnerZ - 7 - (i % 3) * 7.5;
-  // order cables outward from the slot so the ones furthest out lie on the outside of the bundle
+  const lanes = 4, laneZ = (i) => ctx.tableRearInnerZ - 5 - (i % lanes) * 6;
+  // inner ports first, so the cables from further out lie on the outer lanes of the bundle
   const sorted = [...ports].sort((a, b) => Math.abs(a.pos.x) - Math.abs(b.pos.x));
   const laneIndex = { left: 0, right: 0 };
   for (const p of sorted) {
-    const inHole = Math.abs(p.pos.x) <= holeHalf;
-    const sx = Math.sign(p.pos.x) || 1;
-    // Right-angle plugs everywhere: there is only ~43 mm of slot behind the controller before the table edge.
-    const raKind = lib?.plugKindFor ? lib.plugKindFor(p.kind, { rightAngle: true })
-      : { xlr_male_out: 'xlr_female_ra', xlr_trs_combo_in: 'xlr_male_ra', trs_jack: 'trs_635_ra', rca: 'rca_ra', usb_c: 'usb_c_ra', dc_in: 'dc_barrel_ra', dmx_xlr: 'xlr_female_ra' }[p.kind];
-    let plug = null;
-    try { plug = lib ? lib.makePlug(raKind, { color: p.role === 'rca_r' ? 'red' : p.role === 'rca_l' ? 'white' : undefined }) : null; } catch (e) { plug = null; }
-    if (!plug) plug = fallbackPlug(raKind);
-    // plug's local -z goes into the socket; the controller's rear face looks along -z, so turn the plug around.
-    // Plug's local -z goes into the socket and the rear face looks along -z, so turn it around (Ry = PI).
-    // A right-angle plug can be rotated on its own axis: inside the slot's width the cable points straight down;
-    // outside it points sideways towards the slot (Rz is applied first, in the plug's own frame).
-    plug.position.copy(p.pos);
-    plug.rotation.set(0, Math.PI, inHole ? 0 : sx * Math.PI / 2);
-    plug.updateMatrix(); group.add(plug);
-    plug.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    const ud = plug.userData || {};
-    const r = ud.radius ?? 2.8;
-    const exit = new THREE.Vector3(...(ud.exit || [0, -(ud.drop ?? 22), ud.length ?? 22])).applyMatrix4(plug.matrix);
-    const exitDir = new THREE.Vector3(...(ud.exitDir || [0, -1, 0])).applyQuaternion(plug.quaternion).normalize();
-    const side = p.pos.x < 0 ? 'left' : 'right';
-    const pts = [exit.clone(), exit.clone().addScaledVector(exitDir, 6)];
-    if (inHole) {
-      // straight down through the slot
-      const hz = Math.max(exit.z, holeRear + r + 2);
-      pts.push(new THREE.Vector3(exit.x, topY - 25, hz), new THREE.Vector3(exit.x, topY - 90, hz));
-    } else {
-      // sideways towards the slot, back over the rear frame tube, along it, then forward and down into the slot
-      const k = laneIndex[side]++;
-      const lane = laneZ(k);
-      const onTube = tubeTopY + r + 0.3;
-      const xIn = sx * Math.max(10, holeHalf - 14 - k * 9);
-      // gravity: the cable sags from the plug onto the tube in one gentle curve, then lies flat along it
-      const dx = Math.abs(exit.x - xIn);
-      const run = Math.min(60, dx * 0.35);
-      pts.push(new THREE.Vector3(exit.x - sx * run * 0.55, (exit.y + onTube) / 2, (exit.z + lane) / 2));
-      pts.push(new THREE.Vector3(exit.x - sx * run, onTube, lane));
-      if (dx - run > 60) pts.push(new THREE.Vector3((exit.x - sx * run + xIn) / 2, onTube, lane));
-      pts.push(new THREE.Vector3(xIn + sx * 22, onTube, lane));
-      pts.push(new THREE.Vector3(xIn + sx * 4, topY - 6, holeRear + r + 4));
-      pts.push(new THREE.Vector3(xIn, topY - 40, holeRear + r + 7));
-      pts.push(new THREE.Vector3(xIn, topY - 90, holeRear + r + 7));
+    if (p.role === 'mic1') {
+      const d = makeMicDongle(ctx.variant === 'v2' ? 'in' : 'up');
+      d.position.copy(p.pos); d.rotation.y = Math.PI; group.add(d);
+      continue;
     }
-    const colorKey = p.role === 'rca_l' ? 'rca_l' : p.role === 'rca_r' ? 'rca_r' : ({ trs_jack: 'trs', rca: 'rca_l', usb_c: 'usb', dc_in: 'dc' }[p.kind] || 'xlr');
+    const kind = STRAIGHT[p.kind];
+    let plug = null;
+    try { plug = lib ? lib.makePlug(kind, { color: 'black' }) : null; } catch (e) { plug = null; }
+    if (!plug) plug = fallbackPlug(kind);
+    // plug's local -z goes into the socket and the rear face looks along -z, so turn it around (Ry = PI)
+    // all-black look: metal shells and sleeves become black chrome (the contacts are inside the socket anyway)
+    plug.traverse((o) => { if (o.isMesh && o.material?.metalness > 0.5) o.material = BLACK_METAL; });
+    plug.position.copy(p.pos); plug.rotation.set(0, Math.PI, 0);
+    plug.updateMatrix(); group.add(plug);
+    const ud = plug.userData || {};
+    const r = Math.min(ud.radius ?? 2.8, 3.2);
+    const exit = new THREE.Vector3(...(ud.exit || [0, 0, ud.length ?? 30])).applyMatrix4(plug.matrix);
+    const dir = new THREE.Vector3(...(ud.exitDir || [0, 0, 1])).applyQuaternion(plug.quaternion).normalize();
+    const sx = Math.sign(p.pos.x) || 1, side = sx < 0 ? 'left' : 'right';
+    const k = laneIndex[side]++, lane = laneZ(k), onTube = tubeTopY + r + 0.3 + Math.floor(k / lanes) * r * 1.6;
+    // where this cable drops into the slot: spread across it, converging to the middle as it goes down
+    const xIn = THREE.MathUtils.clamp(p.pos.x * 0.55, -(holeHalf - 12), holeHalf - 12);
+    const zIn = holeRear + r + 5 + (k % 3) * 2 * r;
+    // straight out of the plug, then a soft bend down onto the tube
+    const pts = [exit.clone(), exit.clone().addScaledVector(dir, 7)];
+    const bendZ = Math.min(exit.z - 12, lane - 4);
+    pts.push(new THREE.Vector3(exit.x - sx * 2, (exit.y + onTube) / 2 + 2, bendZ));
+    pts.push(new THREE.Vector3(exit.x - sx * 8, onTube, Math.max(bendZ + 6, lane)));
+    const dx = Math.abs(exit.x - sx * 8 - xIn);
+    if (dx > 70) pts.push(new THREE.Vector3((exit.x + xIn) / 2, onTube, lane));
+    if (dx > 30) pts.push(new THREE.Vector3(xIn + sx * Math.min(26, dx * 0.4), onTube, lane));
+    pts.push(new THREE.Vector3(xIn, topY - 4, zIn));
+    pts.push(new THREE.Vector3(xIn * 0.6, topY - 45, zIn + 2));
+    pts.push(new THREE.Vector3(xIn * 0.35, topY - 95, zIn + 2));
     let mesh = null;
-    try { mesh = lib?.makeCable ? lib.makeCable(pts, { radius: r, color: CABLE_COL[colorKey] }) : null; } catch (e) { mesh = null; }
+    try { mesh = lib?.makeCable ? lib.makeCable(pts, { radius: r, color: CABLE }) : null; } catch (e) { mesh = null; }
     if (!mesh) {
       const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-      mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, r, 12, false),
-        new THREE.MeshStandardMaterial({ color: CABLE_COL[colorKey], roughness: 0.55 }));
+      mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, r, 12, false), new THREE.MeshStandardMaterial({ color: CABLE, roughness: 0.55 }));
     }
     mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh);
   }

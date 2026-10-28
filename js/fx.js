@@ -18,26 +18,28 @@ const RAINBOW_GLSL = /* glsl */`
 `;
 
 // Honeycomb diffuser: each hex cell is one LED pocket, hot in the middle and falling off towards a dark cell wall.
+// Flat-topped hexes laid out in the face's own plane (cell = flat-to-flat height). Columns alternate: the main columns
+// (one is centred on x = 0) show two full cells straddling the centre line with partial cells above and below.
 function honeycombMaterial(cell) {
   return new THREE.ShaderMaterial({
     uniforms: { ...fxUniforms, uCell: { value: cell } },
     vertexShader: /* glsl */`
-      varying vec3 vW;
-      void main(){ vec4 w = modelMatrix*vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix*viewMatrix*w; }`,
+      varying vec3 vW; varying vec2 vL;
+      void main(){ vL = position.xy; vec4 w = modelMatrix*vec4(position,1.); vW = w.xyz; gl_Position = projectionMatrix*viewMatrix*w; }`,
     fragmentShader: /* glsl */`
-      varying vec3 vW; uniform float uCell;
+      varying vec3 vW; varying vec2 vL; uniform float uCell;
       ${RAINBOW_GLSL}
       float hexDist(vec2 p){ p = abs(p); return max(dot(p, normalize(vec2(1.,1.7320508))), p.x); }
       void main(){
-        vec2 p = vec2(vW.x, vW.y)/uCell;
+        // swap axes so the pointy-topped lattice below comes out flat-topped; shift half a cell so two centre on y = 0
+        vec2 p = vec2(vL.y/uCell + .5, vL.x/uCell);
         vec2 s = vec2(1.,1.7320508), h = s*.5;
         vec2 a = mod(p, s)-h, b = mod(p-h, s)-h;
         vec2 gv = dot(a,a) < dot(b,b) ? a : b;
-        vec2 cellC = (p-gv)*uCell;
         float d = hexDist(gv);                       // 0 centre .. 0.5 wall
-        float wall = smoothstep(.43, .47, d);
+        float wall = smoothstep(.42, .46, d);
         float core = exp(-d*d*16.);
-        vec3 c = rainbow(cellC.x);
+        vec3 c = rainbow(vW.x + gv.y*uCell);         // one colour per cell, from its centre's world x (face is turned by PI)
         vec3 lit = c*(0.25 + 0.75*core)*uBright*uOn*0.55;
         vec3 col = mix(lit, vec3(0.012), wall);
         gl_FragColor = vec4(col + vec3(0.01), 1.);
@@ -68,19 +70,22 @@ function logoMaterial() {
  * LED strip on the audience-facing (rear, -z) apron of the table.
  * width/height in mm; the strip's face points along -z. Returns a group whose origin is the strip's centre on its back.
  */
-export function makeLedStrip({ width = 995, height = 80, depth = 16, cell = 22 } = {}) {
+export function makeLedStrip({ width = 995, height = 35, depth = 14, border = 3, cell } = {}) {
+  // face shows two full cells per main column plus a quarter of the next ones: face height = 2.5 cells
+  const faceH = height - 2 * border;
+  cell = cell ?? faceH / 2.5;
   const g = new THREE.Group(); g.name = 'ledStrip';
   const housing = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth),
     new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.55, metalness: 0.4 }));
   housing.position.z = -depth / 2; housing.castShadow = true; g.add(housing);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(width - 8, height - 8), honeycombMaterial(cell));
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(width - 2 * border, faceH), honeycombMaterial(cell));
   face.rotation.y = Math.PI; face.position.z = -depth - 0.3; g.add(face);
   // thin frosted cover catching a little of the room light
   const cover = new THREE.Mesh(new THREE.PlaneGeometry(width - 4, height - 4),
     new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.15, transmission: 0, transparent: true, opacity: 0.06 }));
   cover.rotation.y = Math.PI; cover.position.z = -depth - 0.8; g.add(cover);
   // spill light so the floor and the logo box pick up the colour
-  const spill = new THREE.PointLight(0xffffff, 0, 900, 2); spill.position.set(0, -60, -depth - 120); g.add(spill);
+  const spill = new THREE.PointLight(0xffffff, 0, 900, 2); spill.position.set(0, -40, -depth - 120); g.add(spill);
   g.userData.spill = spill;
   return g;
 }

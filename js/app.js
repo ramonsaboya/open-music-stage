@@ -7,8 +7,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
-import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js';
-import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js';
+import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=5';
+import { buildRig, loadScreens, materials as rigMat, AIR, MINI, SHELF_SIDE } from './rig.js?v=5';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -74,7 +74,8 @@ function roleOf(p, all) {
 
 // ---------------- scene assembly ----------------
 const world = new THREE.Group(); scene.add(world);
-let thor, flx, strip, logo, rigs = {}, tex, flxInfo, thorInfo;
+let thor, flx, rigs = {}, tex, flxInfo, thorInfo;
+const fx = {};
 
 async function buildStand() {
   if (thor) world.remove(thor);
@@ -95,24 +96,29 @@ function placeController() {
   // so it sits flush with the table's outer front edge, front feet on the tube (a rimH-thick plate levels the rear feet).
   flx.position.set(0, thorInfo.topY + (thorInfo.rimH || 0), thorInfo.d / 2 - flxInfo.d / 2);
 }
+// Per-version lighting. V1: the strip runs the full table width on the rear edge band, the logo box hangs directly under it.
+// V2: the strip sits near the top of the shelf's rear face (shelf width), the logo box hangs directly under the edge band.
+// Both: the box's back face is in the plane of the table's rear edge, its top touching what is above it.
+const STRIP_H = 35;
 async function buildFx() {
-  if (strip) world.remove(strip); if (logo) world.remove(logo);
+  Object.values(fx).forEach((f) => { world.remove(f.strip); world.remove(f.logo); });
   const ap = thorInfo.apron || { rearFaceZ: thorInfo.rearOuterZ, bottomY: thorInfo.topY - 60, h: 60 };
-  const stripH = 80, top = thorInfo.topY + (thorInfo.rimH || 0);
-  strip = makeLedStrip({ width: thorInfo.w, height: stripH });
-  strip.position.set(0, top - stripH / 2, Math.min(ap.rearFaceZ, thorInfo.rearOuterZ) - 0.5);
-  world.add(strip);
-  logo = logo && logo.userData.reuse ? logo : await makeLogoBox({});
-  logo.userData.reuse = true;
-  const stripBottom = top - stripH, gap = 14;
-  logo.position.set(0, stripBottom - gap, strip.position.z);
-  // two short black hanging straps from the strip housing to the box
-  logo.children.filter((c) => c.userData.strap).forEach((c) => logo.remove(c));
-  [-80, 80].forEach((x) => {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(10, gap + 4, 2), new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.7 }));
-    s.position.set(x, gap / 2, -14); s.userData.strap = true; logo.add(s);
-  });
-  world.add(logo);
+  const edgeZ = Math.min(ap.rearFaceZ, thorInfo.rearOuterZ) - 0.5;
+  const top = thorInfo.topY + (thorInfo.rimH || 0);
+  const shelfTop = thorInfo.topY + (flxInfo.deckY || flxInfo.h || 50) + (flx.position.y - thorInfo.topY);
+  const spec = {
+    a: { width: thorInfo.w, y: top - STRIP_H / 2, logoTop: top - STRIP_H },
+    b: { width: flxInfo.w + 2 * SHELF_SIDE, y: shelfTop - 3 - STRIP_H / 2, logoTop: ap.bottomY ?? thorInfo.topY - 52, depth: 10 },
+  };
+  for (const k of ['a', 'b']) {
+    const sp = spec[k];
+    const strip = makeLedStrip({ width: sp.width, height: STRIP_H, depth: sp.depth });
+    strip.position.set(0, sp.y, edgeZ);
+    const logo = fx[k]?.logo || await makeLogoBox({});
+    logo.position.set(0, sp.logoTop, edgeZ);
+    world.add(strip, logo);
+    fx[k] = { strip, logo };
+  }
 }
 function buildRigs() {
   Object.values(rigs).forEach((r) => world.remove(r));
@@ -120,7 +126,7 @@ function buildRigs() {
   const ports = (flxInfo.ports || []).map((p) => ({ ...p, pos: new THREE.Vector3(p.pos[0] + fp.x, p.pos[1] + fp.y, p.pos[2] + fp.z) }));
   // RCA sockets stand ~8.5 mm proud of the rear face on their collars; the plug seats on the collar tip.
   ports.forEach((p) => { if (p.kind === 'rca') p.pos.z -= 8.5; });
-  ports.forEach((p) => { p.role = roleOf(p, ports); p.clear = { xlr_male_out: 13, xlr_trs_combo_in: 13, trs_jack: 10, rca: 8, usb_c: 7, dc_in: 8 }[p.kind] || 9; });
+  ports.forEach((p) => { p.role = roleOf(p, ports); p.clear = { xlr_male_out: 13, xlr_trs_combo_in: 16, trs_jack: 10, rca: 8, usb_c: 7, dc_in: 8 }[p.kind] || 9; });
   const base = {
     topY: thorInfo.topY, rearZ: fp.z - flxInfo.d / 2, deckY: flxInfo.deckY || flxInfo.h || 50, flxW: flxInfo.w,
     tableRearInnerZ: thorInfo.rearInnerZ, tableRearOuterZ: thorInfo.rearOuterZ, rimH: thorInfo.rimH || 0,
@@ -147,8 +153,6 @@ function applyShow() {
       c.visible = isTablet ? state.show.tablets : state.show.mounts;
     });
   }
-  if (strip) strip.visible = state.show.led;
-  if (logo) logo.visible = state.show.logo;
   studio.floor.visible = state.show.floor;
   shelfMat.transparent = state.shelfOp < 1; shelfMat.opacity = state.shelfOp; shelfMat.depthWrite = state.shelfOp >= 1; shelfMat.needsUpdate = true;
 }
@@ -211,6 +215,8 @@ function renderVariant(key) {
   const other = key === 'a' ? 'b' : 'a';
   if (rigs[key]) rigs[key].visible = true;
   if (rigs[other]) rigs[other].visible = false;
+  if (fx[key]) { fx[key].strip.visible = state.show.led; fx[key].logo.visible = state.show.logo; }
+  if (fx[other]) { fx[other].strip.visible = false; fx[other].logo.visible = false; }
   scene.background = state.bg[key];
   // the floor takes the variant's colour too, so the two halves read apart at a glance
   if (!state.club) studio.floor.material.color.copy(state.bg[key]).multiplyScalar(0.93);
@@ -418,7 +424,7 @@ renderer.setAnimationLoop(() => {
     if (k0 >= 1) tween = null;
   }
   controls.update();
-  tickFx(t, strip, logo);
+  for (const f of Object.values(fx)) tickFx(t, f.strip, f.logo);
   if (flxMod?.tick) flxMod.tick(t, flx);
   renderFrame();
   if (++frames === 20) document.title = 'FLX10 Stage Viewer';
