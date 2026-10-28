@@ -7,8 +7,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
-import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=5';
-import { buildRig, loadScreens, materials as rigMat, AIR, MINI, SHELF_SIDE } from './rig.js?v=5';
+import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=6';
+import { buildRig, loadScreens, materials as rigMat, AIR, MINI, SHELF_SIDE } from './rig.js?v=6';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -97,7 +97,7 @@ function placeController() {
   flx.position.set(0, thorInfo.topY + (thorInfo.rimH || 0), thorInfo.d / 2 - flxInfo.d / 2);
 }
 // Per-version lighting. V1: the strip runs the full table width on the rear edge band, the logo box hangs directly under it.
-// V2: the strip sits near the top of the shelf's rear face (shelf width), the logo box hangs directly under the edge band.
+// V2: the strip sits near the top of the shelf's rear face (shelf width), the logo box's top is flush with the table rim.
 // Both: the box's back face is in the plane of the table's rear edge, its top touching what is above it.
 const STRIP_H = 35;
 async function buildFx() {
@@ -108,7 +108,7 @@ async function buildFx() {
   const shelfTop = thorInfo.topY + (flxInfo.deckY || flxInfo.h || 50) + (flx.position.y - thorInfo.topY);
   const spec = {
     a: { width: thorInfo.w, y: top - STRIP_H / 2, logoTop: top - STRIP_H },
-    b: { width: flxInfo.w + 2 * SHELF_SIDE, y: shelfTop - 3 - STRIP_H / 2, logoTop: ap.bottomY ?? thorInfo.topY - 52, depth: 10 },
+    b: { width: flxInfo.w + 2 * SHELF_SIDE, y: shelfTop - 3 - STRIP_H / 2, logoTop: top, depth: 10 },
   };
   for (const k of ['a', 'b']) {
     const sp = spec[k];

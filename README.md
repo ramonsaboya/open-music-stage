@@ -18,15 +18,16 @@ Useful URL params: `?view=audience|dj|cables|logo|top|side|front|audLow|right45`
 
 ## Versions
 - **V1**: a straight plug in every rear socket (MASTER 1 XLR L/R, MASTER 2 RCA L/R, CH1–CH4 RCA, BOOTH L/R, DMX,
-  both USB-C, MIC 2, DC IN), all black. Each sticks straight out, bends down onto the rear frame tube and converges
-  into the cable slot. MIC 1 carries an L-shaped wireless receiver dongle standing upright. Printed mounts: a 4 mm
+  both USB-C, DC IN), all black. Each sticks straight out, bends down onto the rear frame tube and converges
+  into the cable slot. MIC 1 carries an L-shaped wireless receiver dongle lying flat towards the centre, over MIC 2. Printed mounts: a 4 mm
   bridge plate under the controller's rear feet plus slim uprights snapped into the gaps between plugs, each with a
   seat, lip and backrest for the tablet. LED strip across the full table width on the rear edge band; the logo box
   hangs directly under it, back face in the table edge plane.
-- **V2**: only BOOTH L/R, MIC 1 (dongle lying flat inside the shelf), USB and DC IN. A printed shelf 80 mm wider than the
+- **V2**: only BOOTH L/R (right-angle plugs: L turned flat towards the centre, R 45° down, so the two cables read
+  apart), MIC 1 (the same dongle, inside the shelf), USB and DC IN. A printed shelf 80 mm wider than the
   controller on each side continues its top surface back to the table's rear edge, hides all cables (use "V2 shelf
   opacity" to x-ray it) and carries the tablets. The LED strip sits near the top of the shelf's rear face; the logo
-  box hangs directly under the table's edge band, back face flush with it.
+  box's top is flush with the table rim, back face against the edge band.
 - Both: 35 mm tall honeycomb LED strip (flat-topped cells: two full per column, partial ones above and below),
   240 × 240 × 50 mm black box with the Open Music logo (fits a 220 mm square, 10 mm border), one rainbow wave
   running through both.

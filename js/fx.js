@@ -100,9 +100,9 @@ export async function makeLogoBox({ size = 240, thick = 50, maxLogo = 220, svgUr
   const boxMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0b, roughness: 0.6, metalness: 0.15 });
   const box = new THREE.Mesh(new THREE.BoxGeometry(size, size, thick), boxMat);
   box.position.set(0, -size / 2, -thick / 2); box.castShadow = true; box.receiveShadow = true; g.add(box);
-  // the black front panel is a separate slightly glossy acrylic sheet
+  // the black front panel is a separate acrylic sheet
   const front = new THREE.Mesh(new THREE.PlaneGeometry(size - 2, size - 2),
-    new THREE.MeshPhysicalMaterial({ color: 0x050505, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 }));
+    new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.6 }));   // matte: a glossy face mirrored the spill lights as dots
   front.rotation.y = Math.PI; front.position.set(0, -size / 2, -thick - 0.2); g.add(front);
 
   try {

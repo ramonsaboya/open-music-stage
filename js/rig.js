@@ -114,7 +114,7 @@ export function buildRig(ctx) {
 
   const cables = ctx.variant === 'v2'
     ? ctx.ports.filter((p) => ['booth_l', 'booth_r', 'mic1', 'usb1', 'dc_in'].includes(p.role))
-    : ctx.ports.filter(pluggable);
+    : ctx.ports.filter((p) => pluggable(p) && !(p.kind === 'trs_jack' && /mic/i.test(p.id + ' ' + (p.label || ''))));
   const cableGroup = new THREE.Group(); cableGroup.name = 'cables'; root.add(cableGroup);
   buildCables(cableGroup, cables, ctx);
 
@@ -214,24 +214,39 @@ function buildCables(group, ports, ctx) {
   const laneIndex = { left: 0, right: 0 };
   for (const p of sorted) {
     if (p.role === 'mic1') {
-      const d = makeMicDongle(ctx.variant === 'v2' ? 'in' : 'up');
+      const d = makeMicDongle('in');
       d.position.copy(p.pos); d.rotation.y = Math.PI; group.add(d);
       continue;
     }
-    const kind = STRAIGHT[p.kind];
+    // V2 booth jacks: right-angle plugs splayed at different angles so the two cables read apart. BOOTH L (inner)
+    // turns flat towards the centre; BOOTH R goes 45° down-and-in, between BOOTH L's head and the slot edge.
+    const raAngle = ctx.variant === 'v2' && /^booth_/.test(p.role) ? (p.role === 'booth_l' ? Math.PI / 2 : Math.PI / 4) : null;
+    const kind = raAngle != null ? 'trs_635_ra' : STRAIGHT[p.kind];
     let plug = null;
     try { plug = lib ? lib.makePlug(kind, { color: 'black' }) : null; } catch (e) { plug = null; }
     if (!plug) plug = fallbackPlug(kind);
     // plug's local -z goes into the socket and the rear face looks along -z, so turn it around (Ry = PI)
     // all-black look: metal shells and sleeves become black chrome (the contacts are inside the socket anyway)
     plug.traverse((o) => { if (o.isMesh && o.material?.metalness > 0.5) o.material = BLACK_METAL; });
-    plug.position.copy(p.pos); plug.rotation.set(0, Math.PI, 0);
+    plug.position.copy(p.pos); plug.rotation.set(0, Math.PI, raAngle ?? 0);
     plug.updateMatrix(); group.add(plug);
     const ud = plug.userData || {};
     const r = Math.min(ud.radius ?? 2.8, 3.2);
     const exit = new THREE.Vector3(...(ud.exit || [0, 0, ud.length ?? 30])).applyMatrix4(plug.matrix);
     const dir = new THREE.Vector3(...(ud.exitDir || [0, 0, 1])).applyQuaternion(plug.quaternion).normalize();
     const sx = Math.sign(p.pos.x) || 1, side = sx < 0 ? 'left' : 'right';
+    if (raAngle != null) {
+      // straight on from the elbow, then down through the slot converging to the middle
+      const zIn = THREE.MathUtils.clamp(exit.z, holeRear + r + 3, ctx.rearZ - r - 3);
+      const a = exit.clone().addScaledVector(dir, 10);
+      const pts = [exit.clone(), a];
+      if (dir.y > -0.9) pts.push(new THREE.Vector3(a.x + dir.x * 8, Math.min(a.y - 10, topY - 6), zIn));
+      pts.push(new THREE.Vector3(a.x * 0.8, topY - 45, zIn), new THREE.Vector3(a.x * 0.5, topY - 95, zIn));
+      const mesh = lib?.makeCable ? lib.makeCable(pts, { radius: r, color: CABLE })
+        : new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), 80, r, 12, false), new THREE.MeshStandardMaterial({ color: CABLE, roughness: 0.55 }));
+      mesh.castShadow = true; group.add(mesh);
+      continue;
+    }
     const k = laneIndex[side]++, lane = laneZ(k), onTube = tubeTopY + r + 0.3 + Math.floor(k / lanes) * r * 1.6;
     // where this cable drops into the slot: spread across it, converging to the middle as it goes down
     const xIn = THREE.MathUtils.clamp(p.pos.x * 0.55, -(holeHalf - 12), holeHalf - 12);
