@@ -7,8 +7,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
-import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=6';
-import { buildRig, loadScreens, materials as rigMat, AIR, MINI, SHELF_SIDE } from './rig.js?v=6';
+import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=7';
+import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=7';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -23,7 +23,7 @@ controls.minDistance = 60; controls.maxDistance = 9000; controls.maxPolarAngle =
 controls.screenSpacePanning = true;
 
 const state = {
-  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1,
+  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1, v2Full: true,
   mode: Q.get('mode') || 'a', mix: 0.5, split: +(Q.get('split') || 0.5), swap: false,
   bg: { a: new THREE.Color('#a9c0e0'), b: new THREE.Color('#e2b896') },
   show: { cables: true, tablets: true, mounts: true, led: true, logo: true, floor: true },
@@ -97,9 +97,11 @@ function placeController() {
   flx.position.set(0, thorInfo.topY + (thorInfo.rimH || 0), thorInfo.d / 2 - flxInfo.d / 2);
 }
 // Per-version lighting. V1: the strip runs the full table width on the rear edge band, the logo box hangs directly under it.
-// V2: the strip sits near the top of the shelf's rear face (shelf width), the logo box's top is flush with the table rim.
+// V2: the strip sits near the top of the shelf's rear face, at the shelf's width, the logo box's top is flush with the table rim.
 // Both: the box's back face is in the plane of the table's rear edge, its top touching what is above it.
 const STRIP_H = 35;
+// V2 shelf (and its strip): full table width, or the controller's width plus 80 mm each side
+const v2ShelfW = () => (state.v2Full ? thorInfo.w : flxInfo.w + 160);
 async function buildFx() {
   Object.values(fx).forEach((f) => { world.remove(f.strip); world.remove(f.logo); });
   const ap = thorInfo.apron || { rearFaceZ: thorInfo.rearOuterZ, bottomY: thorInfo.topY - 60, h: 60 };
@@ -108,7 +110,7 @@ async function buildFx() {
   const shelfTop = thorInfo.topY + (flxInfo.deckY || flxInfo.h || 50) + (flx.position.y - thorInfo.topY);
   const spec = {
     a: { width: thorInfo.w, y: top - STRIP_H / 2, logoTop: top - STRIP_H },
-    b: { width: flxInfo.w + 2 * SHELF_SIDE, y: shelfTop - 3 - STRIP_H / 2, logoTop: top, depth: 10 },
+    b: { width: v2ShelfW(), y: shelfTop - 3 - STRIP_H / 2, logoTop: top, depth: 10 },
   };
   for (const k of ['a', 'b']) {
     const sp = spec[k];
@@ -129,7 +131,7 @@ function buildRigs() {
   ports.forEach((p) => { p.role = roleOf(p, ports); p.clear = { xlr_male_out: 13, xlr_trs_combo_in: 16, trs_jack: 10, rca: 8, usb_c: 7, dc_in: 8 }[p.kind] || 9; });
   const base = {
     topY: thorInfo.topY, rearZ: fp.z - flxInfo.d / 2, deckY: flxInfo.deckY || flxInfo.h || 50, flxW: flxInfo.w,
-    tableRearInnerZ: thorInfo.rearInnerZ, tableRearOuterZ: thorInfo.rearOuterZ, rimH: thorInfo.rimH || 0,
+    shelfW: v2ShelfW(), tableRearInnerZ: thorInfo.rearInnerZ, tableRearOuterZ: thorInfo.rearOuterZ, rimH: thorInfo.rimH || 0,
     cutout: { ...thorInfo.cutout }, ports, plugs: conMod, tex, tilt: state.tilt, base: state.base,
     miniLevel: state.miniLevel, highlight: state.hl, lift: fp.y - thorInfo.topY,
   };
@@ -357,6 +359,7 @@ $('tilt').oninput = (e) => { state.tilt = +e.target.value; $('tiltV').textConten
 $('base').oninput = (e) => { state.base = +e.target.value; $('baseV').textContent = state.base + ' mm'; rebuildSoon(); };
 $('miniLevel').onchange = (e) => { state.miniLevel = e.target.checked; rebuildSoon(); };
 $('hl').onchange = (e) => { state.hl = e.target.checked; rebuildSoon(); };
+$('v2Full').onchange = (e) => { state.v2Full = e.target.checked; rebuildSoon(true); };
 $('shelfOp').oninput = (e) => { state.shelfOp = e.target.value / 100; $('shelfOpV').textContent = e.target.value + '%'; applyShow(); };
 [['sCables', 'cables'], ['sTablets', 'tablets'], ['sMounts', 'mounts'], ['sLed', 'led'], ['sLogo', 'logo'], ['sFloor', 'floor']]
   .forEach(([id, k]) => { $(id).onchange = (e) => { state.show[k] = e.target.checked; applyShow(); }; });

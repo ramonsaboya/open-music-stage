@@ -4,7 +4,6 @@ import * as THREE from 'three';
 export const AIR = { w: 247.6, h: 178.5, t: 6.1, bezel: 8.5, r: 18 };
 export const MINI = { w: 195.4, h: 134.8, t: 6.3, bezel: 7.5, r: 16 };
 export const GAP = 10;
-export const SHELF_SIDE = 80;   // V2 shelf overhangs the controller's width by this much on each side
 
 const M = {
   alu: new THREE.MeshStandardMaterial({ color: 0x3a3b3f, roughness: 0.32, metalness: 0.85 }),
@@ -144,7 +143,7 @@ export function buildRig(ctx) {
     const mat = ctx.shelfMaterial || M.shelf;
     // top surface flush with the controller's deck; a hollow printed shell (walls drawn as solid blocks here)
     const h = ctx.deckY + (ctx.lift || 0), z0 = rearZ - 0.8, z1 = ctx.tableRearInnerZ, z2 = ctx.tableRearOuterZ;
-    const W = ctx.flxW + 2 * SHELF_SIDE;
+    const W = ctx.shelfW;
     const body = box(W, h, z0 - z1, mat, 0, topY + h / 2, (z0 + z1) / 2, shelf);
     const capH = h - ctx.rimH;
     box(W, capH, z1 - z2 + 0.5, mat, 0, topY + ctx.rimH + capH / 2, (z1 + z2) / 2, shelf);   // over the rear frame tube

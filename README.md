@@ -24,8 +24,8 @@ Useful URL params: `?view=audience|dj|cables|logo|top|side|front|audLow|right45`
   seat, lip and backrest for the tablet. LED strip across the full table width on the rear edge band; the logo box
   hangs directly under it, back face in the table edge plane.
 - **V2**: only BOOTH L/R (right-angle plugs: L turned flat towards the centre, R 45° down, so the two cables read
-  apart), MIC 1 (the same dongle, inside the shelf), USB and DC IN. A printed shelf 80 mm wider than the
-  controller on each side continues its top surface back to the table's rear edge, hides all cables (use "V2 shelf
+  apart), MIC 1 (the same dongle, inside the shelf), USB and DC IN. A printed shelf (full table width, or the controller's width
+  plus 80 mm each side with the Setup toggle) continues its top surface back to the table's rear edge, hides all cables (use "V2 shelf
   opacity" to x-ray it) and carries the tablets. The LED strip sits near the top of the shelf's rear face; the logo
   box's top is flush with the table rim, back face against the edge band.
 - Both: 35 mm tall honeycomb LED strip (flat-topped cells: two full per column, partial ones above and below),
