@@ -1,0 +1,13 @@
+# Reference material stays local; only the three Pioneer images the FLX10 model loads at runtime are published.
+refs/*
+!refs/flx10/
+refs/flx10/*
+!refs/flx10/pioneer/
+refs/flx10/pioneer/*
+!refs/flx10/pioneer/p_31.png
+!refs/flx10/pioneer/p_35.png
+!refs/flx10/pioneer/p_07.jpg
+shots/
+legacy/
+.claude/
+__pycache__/

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FLX10 Stage Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Full-bleed 3D view, one collapsible control card on the left, a compare bar at the bottom. Dark studio UI. */
+:root{
+  --bg:#141518; --card:rgba(22,23,26,.9); --fg:#ebe9e4; --muted:#9a978f; --rule:#34363b; --chip:#25272c;
+  --accent:#f08a4b; --a:#5aa9ff; --b:#ff7a59;
+  --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.4 var(--sans);overflow:hidden}
+#view{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#panel{position:fixed;top:12px;left:max(16px,env(safe-area-inset-left));width:min(320px,calc(100vw - 32px));
+  max-height:calc(100vh - 92px);overflow:auto;background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--rule);
+  border-radius:10px;padding:14px 16px;display:grid;gap:14px;scrollbar-width:thin}
+#panel.min > :not(header){display:none}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+h1{font-size:.98rem;font-weight:600;margin:0;line-height:1.3}
+.eyebrow{font:500 .64rem/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+button,select{font:inherit;font-size:.78rem;padding:5px 9px;border:1px solid var(--rule);background:var(--chip);color:var(--fg);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.on{border-color:var(--accent);color:var(--accent)}
+button.icon{padding:3px 8px}
+label.sl{display:grid;gap:3px;font-size:.78rem;color:var(--muted)}
+label.sl b{color:var(--fg);font:500 .76rem var(--mono);float:right}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.chk{display:flex;align-items:center;gap:8px;font-size:.8rem}
+.chk input{accent-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+details{border-top:1px solid var(--rule);padding-top:10px}
+summary{cursor:pointer;font:500 .66rem var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);list-style:none}
+summary::after{content:" +";} details[open] summary::after{content:" –"}
+details > div{margin-top:10px;display:grid;gap:10px}
+#readout{font:.72rem/1.65 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#readout b{color:var(--fg);font-weight:500}
+#saved{display:flex;flex-wrap:wrap;gap:6px}
+#saved button{font-family:var(--mono);font-size:.72rem}
+/* compare bar */
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;
+  background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--rule);border-radius:10px;padding:8px 10px;max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
+#bar .sep{width:1px;height:22px;background:var(--rule)}
+#bar input[type=range]{width:120px}
+#bar input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--rule);border-radius:5px;background:none;cursor:pointer}
+.tagA{color:var(--a)} .tagB{color:var(--b)}
+/* split handle */
+#split{position:fixed;z-index:3;display:none;cursor:ew-resize}
+#split.v{top:0;bottom:0;width:22px;margin-left:-11px}
+#split.h{left:0;right:0;height:22px;margin-top:-11px;cursor:ns-resize}
+#split::before{content:"";position:absolute;background:rgba(255,255,255,.85);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+#split.v::before{left:10px;top:0;bottom:0;width:2px}
+#split.h::before{top:10px;left:0;right:0;height:2px}
+#split i{position:absolute;width:30px;height:30px;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font:600 12px var(--mono);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#split.v i{left:-4px;top:50%;margin-top:-15px} #split.h i{top:-4px;left:50%;margin-left:-15px}
+.vlabel{position:fixed;z-index:2;font:600 .72rem var(--mono);letter-spacing:.06em;padding:4px 8px;border-radius:5px;background:rgba(0,0,0,.55);display:none;pointer-events:none}
+#hint{position:fixed;right:16px;top:14px;font:.68rem/1.6 var(--mono);color:var(--muted);text-align:right;text-shadow:0 1px 2px #000;pointer-events:none}
+#loading{position:fixed;inset:0;display:grid;place-items:center;font:500 .8rem var(--mono);color:var(--muted);pointer-events:none}
+@media (max-width:640px){
+  #panel{top:max(10px,env(safe-area-inset-top));left:12px;width:calc(100vw - 24px);max-height:52vh;padding:10px 12px;gap:10px}
+  #panel h1{font-size:.86rem}
+  #hint{display:none}
+  #bar{left:12px;right:12px;transform:none;max-width:none;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;
+    padding:6px 8px;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #bar::-webkit-scrollbar{display:none}
+  #bar > *{flex:none}
+  #bar .eyebrow{display:none}
+  #bar input[type=range]{width:90px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="loading">loading models…</div>
+<div id="split" class="v"><i>⇆</i></div>
+<div class="vlabel" id="labA"></div><div class="vlabel" id="labB"></div>
+
+<aside id="panel">
+  <header>
+    <div><div class="eyebrow">To scale · 1 unit = 1 mm</div><h1>DDJ-FLX10 on a THOR DJS002, iPad Air + mini</h1></div>
+    <button class="icon" id="min" type="button" title="Collapse panel" aria-label="Collapse panel">–</button>
+  </header>
+
+  <div>
+    <div class="eyebrow">Camera</div>
+    <div class="row" id="views"></div>
+    <div class="row" style="margin-top:8px">
+      <button type="button" id="walk" title="WASD / arrows move, Q/E down/up, drag to look">Walk mode</button>
+      <button type="button" id="spin">Auto-orbit</button>
+      <button type="button" id="saveView">Save view</button>
+      <button type="button" id="shot">Screenshot</button>
+    </div>
+    <div id="saved" style="margin-top:8px"></div>
+    <label class="sl" style="margin-top:8px"><span>Field of view <b id="fovV">32°</b></span><input type="range" id="fov" min="14" max="80" value="32"></label>
+  </div>
+
+  <details open><summary>Setup</summary><div>
+    <label class="sl"><span>Table height <b id="tableHV">800 mm</b></span><input type="range" id="tableH" min="675" max="925" value="800" step="5"></label>
+    <label class="sl"><span>Tablet lean from vertical <b id="tiltV">20°</b></span><input type="range" id="tilt" min="8" max="35" value="20"></label>
+    <label class="sl"><span>Tablet bottom edge above table <b id="baseV">60 mm</b></span><input type="range" id="base" min="45" max="120" value="60"></label>
+    <label class="chk"><input type="checkbox" id="miniLevel"> Level the mini's top with the Air's</label>
+    <label class="chk"><input type="checkbox" id="hl"> Tint printed parts orange</label>
+    <label class="sl"><span>V2 shelf opacity (x-ray) <b id="shelfOpV">100%</b></span><input type="range" id="shelfOp" min="0" max="100" value="100"></label>
+  </div></details>
+
+  <details open><summary>Show</summary><div class="grid2">
+    <label class="chk"><input type="checkbox" id="sCables" checked> Cables</label>
+    <label class="chk"><input type="checkbox" id="sTablets" checked> iPads</label>
+    <label class="chk"><input type="checkbox" id="sMounts" checked> Mounts / shelf</label>
+    <label class="chk"><input type="checkbox" id="sLed" checked> LED strip</label>
+    <label class="chk"><input type="checkbox" id="sLogo" checked> Logo box</label>
+    <label class="chk"><input type="checkbox" id="sFloor" checked> Floor</label>
+  </div></details>
+
+  <details><summary>Light</summary><div>
+    <div class="row" id="lights"></div>
+    <label class="sl"><span>Exposure <b id="expV">1.00</b></span><input type="range" id="exp" min="30" max="200" value="100"></label>
+    <label class="sl"><span>Glow (bloom) <b id="bloomV">0.55</b></span><input type="range" id="bloom" min="0" max="200" value="55"></label>
+    <label class="sl"><span>LED brightness <b id="ledBV">4.0</b></span><input type="range" id="ledB" min="0" max="100" value="40"></label>
+    <label class="sl"><span>Rainbow speed <b id="ledSV">0.25</b></span><input type="range" id="ledS" min="0" max="150" value="25"></label>
+    <label class="sl"><span>Rainbow wavelength <b id="ledWV">900 mm</b></span><input type="range" id="ledW" min="150" max="3000" value="900" step="10"></label>
+  </div></details>
+
+  <div id="readout"></div>
+</aside>
+
+<div id="hint">drag orbit · right-drag pan · wheel zoom<br>double-click to focus · 1–9 views · W walk · C compare</div>
+
+<div id="bar" role="toolbar" aria-label="Compare versions">
+  <span class="eyebrow" style="margin:0">Show</span>
+  <button type="button" data-mode="a" class="on"><span class="tagA">●</span> V1</button>
+  <button type="button" data-mode="b"><span class="tagB">●</span> V2</button>
+  <span class="sep"></span>
+  <button type="button" data-mode="overlay">Overlay</button>
+  <button type="button" data-mode="splitv">Split ⇆</button>
+  <button type="button" data-mode="splith">Split ⇅</button>
+  <span class="sep"></span>
+  <label class="chk" title="Overlay blend: 0 = V1, 100 = V2" id="mixWrap" style="display:none">V1<input type="range" id="mix" min="0" max="100" value="50">V2</label>
+  <label class="chk" title="Background colour for V1">V1 bg<input type="color" id="bgA" value="#a9c0e0"></label>
+  <label class="chk" title="Background colour for V2">V2 bg<input type="color" id="bgB" value="#e2b896"></label>
+  <label class="chk"><input type="checkbox" id="swap"> Swap sides</label>
+</div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
+<script type="module" src="js/app.js?v=4"></script>
+</body>
+</html>
