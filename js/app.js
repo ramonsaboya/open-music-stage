@@ -7,8 +7,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
-import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=8';
-import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=8';
+import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=9';
+import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=9';
+import { buildFrontMount, TONGUE_T } from './front.js?v=9';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -23,17 +24,17 @@ controls.minDistance = 60; controls.maxDistance = 9000; controls.maxPolarAngle =
 controls.screenSpacePanning = true;
 
 const state = {
-  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1, v2Full: true,
+  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1, v2Full: true, kbAngle: 8, kbX: -83,
   mode: Q.get('mode') || 'a', mix: 0.5, split: +(Q.get('split') || 0.5), swap: false,
   bg: { a: new THREE.Color('#a9c0e0'), b: new THREE.Color('#e2b896') },
-  show: { cables: true, tablets: true, mounts: true, led: true, logo: true, floor: true },
+  show: { cables: true, tablets: true, mounts: true, led: true, logo: true, floor: true, keyboard: true },
 };
 
 // ---------------- module loading with fallbacks ----------------
 async function tryImport(name) {
   try { return await import('./' + name + '.js?v=' + Date.now()); } catch (e) { console.warn('module ' + name + ' unavailable', e); return null; }
 }
-const [thorMod, flxMod, conMod] = await Promise.all([tryImport('thor'), tryImport('flx10'), tryImport('connectors')]);
+const [thorMod, flxMod, conMod, kbMod] = await Promise.all([tryImport('thor'), tryImport('flx10'), tryImport('connectors'), tryImport('keyboard')]);
 
 function fallbackThor(opts) {
   const h = opts.height || 800, g = new THREE.Group();
@@ -74,7 +75,7 @@ function roleOf(p, all) {
 
 // ---------------- scene assembly ----------------
 const world = new THREE.Group(); scene.add(world);
-let thor, flx, rigs = {}, tex, flxInfo, thorInfo;
+let thor, flx, rigs = {}, tex, flxInfo, thorInfo, front, keyboard;
 const fx = {};
 
 async function buildStand() {
@@ -94,7 +95,8 @@ function placeController() {
   // Front face against the inside of the front rim (the DJ's side), centred left-right.
   // The THOR's front/rear frame tubes stand rimH above the panel; the controller's body clears them on its feet,
   // so it sits flush with the table's outer front edge, front feet on the tube (a rimH-thick plate levels the rear feet).
-  flx.position.set(0, thorInfo.topY + (thorInfo.rimH || 0), thorInfo.d / 2 - flxInfo.d / 2);
+  // the front mount's tongue lifts the controller by TONGUE_T; the rear plate grows by the same, so it stays level
+  flx.position.set(0, thorInfo.topY + (thorInfo.rimH || 0) + TONGUE_T, thorInfo.d / 2 - flxInfo.d / 2);
 }
 // Per-version lighting. V1: the strip runs the full table width on the rear edge band, the logo box hangs directly under it.
 // V2: the strip sits near the top of the shelf's rear face, at the shelf's width, the logo box's top is flush with the table rim.
@@ -136,6 +138,15 @@ function buildRigs() {
     miniLevel: state.miniLevel, highlight: state.hl, lift: fp.y - thorInfo.topY,
   };
   base.cutout.x = (thorInfo.cutout.x || 0);
+  // front keyboard mount (same in both versions), centred on the controller's front headphone jacks by default
+  if (front) world.remove(front);
+  if (keyboard === undefined) keyboard = null;
+  const jack = (flxInfo.frontPorts || []).find((p) => /6[._]3/.test(p.id)) || { pos: [-92] };
+  front = buildFrontMount({
+    topY: thorInfo.topY, rimH: thorInfo.rimH || 0, frontZ: fp.z + flxInfo.d / 2, deckWorldY: fp.y + (flxInfo.deckY || 50),
+    x: state.kbX, angle: state.kbAngle, keyboard, jackX: jack.pos[0], material: state.hl ? rigMat.printHl : rigMat.print,
+  });
+  world.add(front);
   rigs.a = buildRig({ ...base, variant: 'v1' });
   rigs.b = buildRig({ ...base, variant: 'v2', shelfMaterial: shelfMat });
   world.add(rigs.a, rigs.b);
@@ -156,6 +167,7 @@ function applyShow() {
     });
   }
   studio.floor.visible = state.show.floor;
+  if (front) front.children.forEach((c) => { c.visible = c === keyboard?.group ? state.show.keyboard : state.show.mounts; });
   shelfMat.transparent = state.shelfOp < 1; shelfMat.opacity = state.shelfOp; shelfMat.depthWrite = state.shelfOp >= 1; shelfMat.needsUpdate = true;
 }
 
@@ -243,6 +255,7 @@ const VIEWS = {
   right45: { label: '45° right', pos: [1150, 1380, 1100], tgt: [0, 830, -20] },
   dj: { label: 'DJ eyes', pos: [0, 1640, 560], tgt: [0, 840, -120] },
   front: { label: 'Front', pos: [0, 1050, 1900], tgt: [0, 800, 0] },
+  keyboard: { label: 'Keyboard', pos: [-420, 1080, 820], tgt: [-83, 830, 270] },
   audience: { label: 'Audience', pos: [0, 1550, -2700], tgt: [0, 700, 0] },
   audLow: { label: 'Audience low', pos: [-950, 1050, -1800], tgt: [0, 720, -120] },
   cables: { label: 'Cables close', pos: [420, 1080, -620], tgt: [0, 830, -190] },
@@ -361,8 +374,10 @@ $('base').oninput = (e) => { state.base = +e.target.value; $('baseV').textConten
 $('miniLevel').onchange = (e) => { state.miniLevel = e.target.checked; rebuildSoon(); };
 $('hl').onchange = (e) => { state.hl = e.target.checked; rebuildSoon(); };
 $('v2Full').onchange = (e) => { state.v2Full = e.target.checked; rebuildSoon(true); };
+$('kbAngle').oninput = (e) => { state.kbAngle = +e.target.value; $('kbAngleV').textContent = state.kbAngle + '°'; rebuildSoon(); };
+$('kbX').oninput = (e) => { state.kbX = +e.target.value; $('kbXV').textContent = state.kbX + ' mm'; rebuildSoon(); };
 $('shelfOp').oninput = (e) => { state.shelfOp = e.target.value / 100; $('shelfOpV').textContent = e.target.value + '%'; applyShow(); };
-[['sCables', 'cables'], ['sTablets', 'tablets'], ['sMounts', 'mounts'], ['sLed', 'led'], ['sLogo', 'logo'], ['sFloor', 'floor']]
+[['sKeyboard', 'keyboard'], ['sCables', 'cables'], ['sTablets', 'tablets'], ['sMounts', 'mounts'], ['sLed', 'led'], ['sLogo', 'logo'], ['sFloor', 'floor']]
   .forEach(([id, k]) => { $(id).onchange = (e) => { state.show[k] = e.target.checked; applyShow(); }; });
 
 // ---------------- compare bar ----------------
@@ -416,7 +431,9 @@ handle.tabIndex = 0; handle.setAttribute('role', 'slider'); handle.setAttribute(
 
 // ---------------- boot ----------------
 tex = loadScreens(renderer);
-await buildStand(); await buildController(); placeController(); await buildFx(); buildRigs();
+await buildStand(); await buildController(); placeController(); await buildFx();
+try { keyboard = kbMod ? await kbMod.build(THREE, {}) : null; } catch (e) { console.warn('keyboard build failed', e); keyboard = null; }
+buildRigs();
 $('loading').remove();
 camera.position.fromArray(VIEWS[Q.get('view')]?.pos || VIEWS.right45.pos);
 controls.target.fromArray(VIEWS[Q.get('view')]?.tgt || VIEWS.right45.tgt); controls.update();

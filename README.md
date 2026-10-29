@@ -32,6 +32,14 @@ Useful URL params: `?view=audience|dj|cables|logo|top|side|front|audLow|right45`
   240 × 240 × 50 mm black box with the Open Music logo (fits a 220 mm square, 10 mm border), one rainbow wave
   running through both.
 
+## Front keyboard mount (both versions)
+A printed mount on the DJ side: a 3 mm tongue under the controller's front feet (the controller rises 3 mm and the V1
+rear plate grows to 7 mm, so it stays level), a front wall covering the controller's front headphone jacks, and a
+platform sticking out past the table edge, sloping 8° towards the DJ, carrying a Keychron B1 Pro (UK ISO, 296 × 130 mm,
+5.2 / 14.5 mm high) with its rear top edge level with the controller's deck. The headphone cable leaves through a
+grommet on the mount's front. Slope and position are sliders under Setup; the keyboard model is `js/keyboard.js`
+(notes in `notes/keyboard.md`, USB-C port position estimated).
+
 ## Versions and compare
 The panel's Version row switches between V1 · main and V2 · backup (key `V`). "Compare" opens the bottom bar:
 Overlay (blend slider), Split ⇆ / Split ⇅ with a draggable divider (arrow keys when focused), a background colour per
@@ -46,6 +54,8 @@ version (also tints the floor), swap sides; key `C` cycles modes while it is ope
 | `js/connectors.js` | XLR / TRS / RCA / USB-C / DC plugs incl. right-angle variants (87/100), cable routing |
 | `js/rig.js` | tablets, screens, V1 mounts, V2 shelf, mic dongle, cable routing on the table |
 | `js/fx.js` | LED strip and logo box shaders |
+| `js/front.js`, `js/keyboard.js` | front keyboard mount; Keychron B1 Pro model |
+| `notes/mount-research-prompt.md` | brief for researching how to print the tablet mounts |
 | `CONTRACT.md` | axes, units and module API |
 | `notes/*.md` | per-model fidelity passes and what still differs from reality |
 | `shots/` | renders; `tools/shot.sh` makes headless screenshots; `harness.html?m=<module>` views one model |
