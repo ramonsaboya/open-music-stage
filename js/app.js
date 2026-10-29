@@ -9,7 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
 import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=9';
 import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=9';
-import { buildFrontMount, TONGUE_T } from './front.js?v=9';
+import { buildFrontMount, TONGUE_T } from './front.js?v=10';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -24,7 +24,7 @@ controls.minDistance = 60; controls.maxDistance = 9000; controls.maxPolarAngle =
 controls.screenSpacePanning = true;
 
 const state = {
-  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1, v2Full: true, kbAngle: 8, kbX: -83,
+  tableH: 800, tilt: 20, base: 60, miniLevel: false, hl: false, shelfOp: 1, v2Full: true, kbAngle: 8, kbX: 190,
   mode: Q.get('mode') || 'a', mix: 0.5, split: +(Q.get('split') || 0.5), swap: false,
   bg: { a: new THREE.Color('#a9c0e0'), b: new THREE.Color('#e2b896') },
   show: { cables: true, tablets: true, mounts: true, led: true, logo: true, floor: true, keyboard: true },
@@ -138,13 +138,12 @@ function buildRigs() {
     miniLevel: state.miniLevel, highlight: state.hl, lift: fp.y - thorInfo.topY,
   };
   base.cutout.x = (thorInfo.cutout.x || 0);
-  // front keyboard mount (same in both versions), centred on the controller's front headphone jacks by default
+  // front keyboard tray (same in both versions), on the right of the controller's front, clear of the headphone/mic side
   if (front) world.remove(front);
   if (keyboard === undefined) keyboard = null;
-  const jack = (flxInfo.frontPorts || []).find((p) => /6[._]3/.test(p.id)) || { pos: [-92] };
   front = buildFrontMount({
     topY: thorInfo.topY, rimH: thorInfo.rimH || 0, frontZ: fp.z + flxInfo.d / 2, deckWorldY: fp.y + (flxInfo.deckY || 50),
-    x: state.kbX, angle: state.kbAngle, keyboard, jackX: jack.pos[0], material: state.hl ? rigMat.printHl : rigMat.print,
+    x: state.kbX, angle: state.kbAngle, keyboard, material: state.hl ? rigMat.printHl : rigMat.print,
   });
   world.add(front);
   rigs.a = buildRig({ ...base, variant: 'v1' });
@@ -255,7 +254,7 @@ const VIEWS = {
   right45: { label: '45° right', pos: [1150, 1380, 1100], tgt: [0, 830, -20] },
   dj: { label: 'DJ eyes', pos: [0, 1640, 560], tgt: [0, 840, -120] },
   front: { label: 'Front', pos: [0, 1050, 1900], tgt: [0, 800, 0] },
-  keyboard: { label: 'Keyboard', pos: [-420, 1080, 820], tgt: [-83, 830, 270] },
+  keyboard: { label: 'Keyboard', pos: [-180, 1080, 820], tgt: [190, 830, 260] },
   audience: { label: 'Audience', pos: [0, 1550, -2700], tgt: [0, 700, 0] },
   audLow: { label: 'Audience low', pos: [-950, 1050, -1800], tgt: [0, 720, -120] },
   cables: { label: 'Cables close', pos: [420, 1080, -620], tgt: [0, 830, -190] },
