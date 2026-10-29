@@ -11,3 +11,6 @@ shots/
 legacy/
 .claude/
 __pycache__/
+!refs/keyboard/
+refs/keyboard/*
+!refs/keyboard/az6.jpg
