@@ -1,7 +1,7 @@
 # FLX10 stage viewer
 
 To-scale (1 unit = 1 mm) Three.js viewer of a Pioneer DDJ-FLX10 on a THOR DJS002 stand with an iPad Air and iPad mini,
-an audience-facing honeycomb LED strip and a hanging illuminated logo box, in two rig versions you can compare.
+an audience-facing honeycomb LED strip and a hanging illuminated logo box, in two rig versions: V1 (the design going ahead, shown by default) and V2 (backup concept).
 
 ## Run
 From this folder, then open http://127.0.0.1:8765 (needs internet for Three.js and fonts from the CDN):
@@ -32,9 +32,10 @@ Useful URL params: `?view=audience|dj|cables|logo|top|side|front|audLow|right45`
   240 × 240 × 50 mm black box with the Open Music logo (fits a 220 mm square, 10 mm border), one rainbow wave
   running through both.
 
-## Compare
-Bottom bar: V1, V2, Overlay (blend slider), Split ⇆ / Split ⇅ with a draggable divider (arrow keys when focused),
-a background colour per version (also tints the floor), swap sides. Key `C` cycles modes.
+## Versions and compare
+The panel's Version row switches between V1 · main and V2 · backup (key `V`). "Compare" opens the bottom bar:
+Overlay (blend slider), Split ⇆ / Split ⇅ with a draggable divider (arrow keys when focused), a background colour per
+version (also tints the floor), swap sides; key `C` cycles modes while it is open.
 
 ## Files
 | File | What |

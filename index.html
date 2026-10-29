@@ -45,8 +45,9 @@ details > div{margin-top:10px;display:grid;gap:10px}
 #saved{display:flex;flex-wrap:wrap;gap:6px}
 #saved button{font-family:var(--mono);font-size:.72rem}
 /* compare bar */
-#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;
+#bar{position:fixed;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));display:none;align-items:center;gap:8px;
   background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--rule);border-radius:10px;padding:8px 10px;max-width:calc(100vw - 32px);flex-wrap:wrap;justify-content:center}
+#bar.show{display:flex}
 #bar .sep{width:1px;height:22px;background:var(--rule)}
 #bar input[type=range]{width:120px}
 #bar input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--rule);border-radius:5px;background:none;cursor:pointer}
@@ -90,6 +91,15 @@ details > div{margin-top:10px;display:grid;gap:10px}
   </header>
 
   <div>
+    <div class="eyebrow">Version</div>
+    <div class="row">
+      <button type="button" id="verA" class="on">V1 · main</button>
+      <button type="button" id="verB" title="Previous concept: printed shelf hiding the cables">V2 · backup</button>
+      <button type="button" id="cmp" title="Show the compare bar (overlay, split view)">Compare</button>
+    </div>
+  </div>
+
+  <div>
     <div class="eyebrow">Camera</div>
     <div class="row" id="views"></div>
     <div class="row" style="margin-top:8px">
@@ -108,8 +118,11 @@ details > div{margin-top:10px;display:grid;gap:10px}
     <label class="sl"><span>Tablet bottom edge above table <b id="baseV">60 mm</b></span><input type="range" id="base" min="45" max="120" value="60"></label>
     <label class="chk"><input type="checkbox" id="miniLevel"> Level the mini's top with the Air's</label>
     <label class="chk"><input type="checkbox" id="hl"> Tint printed parts orange</label>
-    <label class="chk"><input type="checkbox" id="v2Full" checked> V2 shelf full table width (off: controller + 80 mm each side)</label>
-    <label class="sl"><span>V2 shelf opacity (x-ray) <b id="shelfOpV">100%</b></span><input type="range" id="shelfOp" min="0" max="100" value="100"></label>
+  </div></details>
+
+  <details><summary>V2 backup</summary><div>
+    <label class="chk"><input type="checkbox" id="v2Full" checked> Shelf full table width (off: controller + 80 mm each side)</label>
+    <label class="sl"><span>Shelf opacity (x-ray) <b id="shelfOpV">100%</b></span><input type="range" id="shelfOp" min="0" max="100" value="100"></label>
   </div></details>
 
   <details open><summary>Show</summary><div class="grid2">
@@ -133,7 +146,7 @@ details > div{margin-top:10px;display:grid;gap:10px}
   <div id="readout"></div>
 </aside>
 
-<div id="hint">drag orbit · right-drag pan · wheel zoom<br>double-click to focus · 1–9 views · W walk · C compare</div>
+<div id="hint">drag orbit · right-drag pan · wheel zoom<br>double-click to focus · 1–9 views · W walk · V switch version</div>
 
 <div id="bar" role="toolbar" aria-label="Compare versions">
   <span class="eyebrow" style="margin:0">Show</span>
@@ -151,6 +164,6 @@ details > div{margin-top:10px;display:grid;gap:10px}
 </div>
 
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}</script>
-<script type="module" src="js/app.js?v=7"></script>
+<script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>

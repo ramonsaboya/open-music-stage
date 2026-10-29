@@ -7,8 +7,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { makeRenderer, makeStudio } from './env.js';
-import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=7';
-import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=7';
+import { makeLedStrip, makeLogoBox, tickFx, fxUniforms } from './fx.js?v=8';
+import { buildRig, loadScreens, materials as rigMat, AIR, MINI } from './rig.js?v=8';
 
 const Q = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -294,7 +294,8 @@ addEventListener('keydown', (e) => {
   keys.add(e.key.toLowerCase());
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= 9) { const k = Object.keys(VIEWS)[n - 1]; if (k) goTo(k); }
-  if (e.key.toLowerCase() === 'c') { const order = ['a', 'b', 'overlay', 'splitv', 'splith']; setMode(order[(order.indexOf(state.mode) + 1) % order.length]); }
+  if (e.key.toLowerCase() === 'v') setMode(state.mode === 'a' ? 'b' : 'a');
+  if (e.key.toLowerCase() === 'c' && $('bar').classList.contains('show')) { const order = ['a', 'b', 'overlay', 'splitv', 'splith']; setMode(order[(order.indexOf(state.mode) + 1) % order.length]); }
   if (!walk && e.key.toLowerCase() === 'w' && !e.repeat && !e.shiftKey) toggleWalk();
 });
 addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
@@ -368,10 +369,20 @@ $('shelfOp').oninput = (e) => { state.shelfOp = e.target.value / 100; $('shelfOp
 function setMode(m) {
   state.mode = m;
   document.querySelectorAll('#bar [data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+  $('verA').classList.toggle('on', m === 'a'); $('verB').classList.toggle('on', m === 'b');
+  if (m.length > 1) showCompare(true);
   $('mixWrap').style.display = m === 'overlay' ? 'flex' : 'none';
   resize();
 }
 document.querySelectorAll('#bar [data-mode]').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
+// V1 is the design going ahead; V2 stays one click away as the backup. The compare bar is hidden until asked for.
+function showCompare(on) {
+  $('bar').classList.toggle('show', on); $('cmp').classList.toggle('on', on);
+  if (!on && state.mode.length > 1) setMode('a');
+}
+$('verA').onclick = () => setMode('a');
+$('verB').onclick = () => setMode('b');
+$('cmp').onclick = () => showCompare(!$('bar').classList.contains('show'));
 $('mix').oninput = (e) => (state.mix = e.target.value / 100);
 $('bgA').oninput = (e) => state.bg.a.set(e.target.value);
 $('bgB').oninput = (e) => state.bg.b.set(e.target.value);
